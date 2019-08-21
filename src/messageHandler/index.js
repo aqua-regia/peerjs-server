@@ -54,6 +54,6 @@ module.exports = ({ realm }) => {
   messageHandlers.registerHandler(MessageType.CANDIDATE, handleTransmission);
   messageHandlers.registerHandler(MessageType.LEAVE, handleTransmission);
   messageHandlers.registerHandler(MessageType.EXPIRE, handleTransmission);
-  messageHandlers.registerHandler(MessageType.DATA, handleInit)
+  messageHandlers.registerHandler(MessageType.DATA, handleInit);
   return (client, message) => messageHandlers.handle(client, message);
 };

@@ -34,7 +34,6 @@ class Realm {
     if (!this.getMessageQueueById(id)) {
       this._messageQueues.set(id, new MessageQueue(id));
     }
-
     this.getMessageQueueById(id).addMessage(message);
   }
 
@@ -44,9 +43,7 @@ class Realm {
 
   generateClientId () {
     const randomId = () => (Math.random().toString(36) + '0000000000000000000').substr(2, 16);
-
     let clientId = randomId();
-
     while (this.getClientById(clientId)) {
       clientId = randomId();
     }

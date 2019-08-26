@@ -8,25 +8,16 @@ const Realm = require('./models/realm');
 
 const init = ({ app, server, options }) => {
   const config = options;
-  const realm = new Realm();
+  const realm = new Realm();  
   const messageHandler = require('./messageHandler')({ realm });
   const api = require('./api')({ config, realm, messageHandler });
   const { startMessagesExpiration } = require('./services/messagesExpire')({ realm, config });
 
   app.use(options.path, api);
-
-  const wss = new WebSocketServer({
-    server,
-    realm,
-    config: {
-      ...config,
-      path: app.mountpath
-    }
-  });
-
+  
+  const wss = new WebSocketServer( {server, realm, config: {...config, path: app.mountpath} });
   wss.on('connection', client => {
     const messageQueue = realm.getMessageQueueById(client.getId());
-
     if (messageQueue) {
       let message;
       while (message = messageQueue.readMessage()) {
@@ -34,7 +25,6 @@ const init = ({ app, server, options }) => {
       }
       realm.clearMessageQueue(client.getId());
     }
-
     app.emit('connection', client);
   });
 
@@ -54,60 +44,37 @@ const init = ({ app, server, options }) => {
   startMessagesExpiration();
 };
 
-function ExpressPeerServer (server, options) {
+let ExpressPeerServer = function (server, options) {
   const app = express();
-
-  options = {
-    ...config,
-    ...options
-  };
-
+  options = {...config, ...options};
   if (options.proxied) {
     app.set('trust proxy', options.proxied === 'false' ? false : options.proxied);
   }
 
   app.on('mount', () => {
     if (!server) {
-      throw new Error('Server is not passed to constructor - ' +
-        'can\'t start PeerServer');
+      throw new Error('Server is not passed to constructor - can\'t start PeerServer');
     }
-
     init({ app, server, options });
   });
-
   return app;
 }
 
-function PeerServer (options = {}, callback) {
+let PeerServer = function (options = {}, callback) {
   const app = express();
-
-  options = {
-    ...config,
-    ...options
-  };
-
+  options = {...config,...options}; // dereferencing dicts
   let path = options.path;
   const port = options.port;
-
   delete options.path;
 
   if (path[0] !== '/') {
     path = '/' + path;
   }
-
   if (path[path.length - 1] !== '/') {
     path += '/';
   }
-
-  let server;
-
-  if (options.ssl && options.ssl.key && options.ssl.cert) {
-    server = https.createServer(options.ssl, app);
-    delete options.ssl;
-  } else {
-    server = http.createServer(app);
-  }
-
+  
+  let server = http.createServer(app);
   const peerjs = ExpressPeerServer(server, options);
   app.use(path, peerjs);
 
@@ -118,7 +85,6 @@ function PeerServer (options = {}, callback) {
   } else {
     server.listen(port);
   }
-
   return peerjs;
 }
 

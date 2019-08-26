@@ -10,42 +10,28 @@ class WebSocketServer extends EventEmitter {
     this.setMaxListeners(0);
     this.realm = realm;
     this.config = config;
-
     let path = this.config.path;
     path = path + (path[path.length - 1] !== '/' ? '/' : '') + 'peerjs';
-
     this._wss = new WSS({ path, server });
-
     this._wss.on('connection', (socket, req) => this._onSocketConnection(socket, req));
     this._wss.on('error', (error) => this._onSocketError(error));
   }
 
   _onSocketConnection (socket, req) {
     const { query = {} } = url.parse(req.url, true);
-
     const { id, token, key } = query;
-
     if (!id || !token || !key) {
       return this._sendErrorAndClose(socket, Errors.INVALID_WS_PARAMETERS);
     }
-
     if (key !== this.config.key) {
       return this._sendErrorAndClose(socket, Errors.INVALID_KEY);
     }
-
     const client = this.realm.getClientById(id);
-
     if (client) {
       if (token !== client.getToken()) {
-        // ID-taken, invalid token
-        socket.send(JSON.stringify({
-          type: MessageType.ID_TAKEN,
-          payload: { msg: 'ID is taken' }
-        }));
-
+        socket.send(JSON.stringify({type: MessageType.ID_TAKEN, payload: { msg: 'ID is taken' }}));
         return socket.close();
       }
-
       return this._configureWS(socket, client);
     }
 
@@ -74,8 +60,6 @@ class WebSocketServer extends EventEmitter {
 
   _configureWS (socket, client) {
     client.setSocket(socket);
-
-    // Cleanup after a socket closes.
     socket.on('close', () => {
       if (client.socket === socket) {
         this.realm.removeClientById(client.getId());
@@ -110,5 +94,4 @@ class WebSocketServer extends EventEmitter {
     socket.close();
   }
 }
-
 module.exports = WebSocketServer;
